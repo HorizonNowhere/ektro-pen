@@ -1,0 +1,99 @@
+# ─────── 第三方依赖 (不 commit, 用户按 INSTALL.md 拉) ───────
+
+# Weasel fork (5.3 MB + librime/plum/boost 等总 >200MB)
+# 我们对 weasel 的改动放在 upstream/patches/ 单独 commit
+upstream/weasel-master/
+upstream/*.zip
+upstream/*.tar.gz
+
+# Boost build cache (junction)
+/bx/
+
+# 临时下载文件 (plum.zip / boost zip 等)
+plum.zip
+boost*.zip
+boost*.tar.gz
+
+# Skill 元数据 (Claude Code 自动生成, 非项目内容)
+openspec-apply/
+openspec-archive/
+openspec-explore/
+openspec-proposal/
+
+# 大模型 (522 MB Qwen3-0.6B)
+data/models/*.gguf
+/ektro-models/
+
+# llama.cpp binaries (15 MB)
+tools/llama.cpp/
+tools/llama-*.zip
+
+# SQLite amalgamation (8.8 MB sqlite3.c) - 用户按 INSTALL.md 单独下
+src-cpp/third_party/sqlite3.c
+src-cpp/third_party/sqlite3.h
+src-cpp/third_party/sqlite3ext.h
+src-cpp/third_party/shell.c
+
+# 大型 header-only libs (可选 commit; 当前选择 commit 让用户开箱即用)
+# 注: httplib.h (662 KB) 和 nlohmann/json.hpp (943 KB) 故意保留 commit
+
+# ─────── 编译产物 ───────
+
+src-cpp/build/
+*.obj
+*.lib
+*.dll
+*.exe
+!experience.bat
+!*.bat
+
+# ─────── 测试 / 运行时数据 ───────
+
+# SQLite 测试库 (自动生成)
+tests/memory/*.db
+tests/memory/*.db-wal
+tests/memory/*.db-shm
+
+# Benchmark 输出
+tests/latency/results.json
+tests/latency/results.csv
+tests/latency/server_results.json
+tests/latency/server.stdout.log
+tests/latency/server.stderr.log
+tests/predictor/server.stdout.log
+tests/predictor/server.stderr.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Build engine artifacts
+*.log
+
+# ─────── IDE / 编辑器 ───────
+
+.vs/
+.vscode/
+*.swp
+.idea/
+*.user
+
+# ─────── OS ───────
+
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# ─────── 安全: 永不 commit ───────
+
+# 用户私密配置
+.env
+.env.local
+secrets/
+
+# 用户输入历史 (任何 .db 文件)
+*.db
+*.db-wal
+*.db-shm
+!data/dict/*.db

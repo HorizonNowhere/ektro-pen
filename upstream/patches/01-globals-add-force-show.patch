@@ -1,0 +1,8 @@
+--- weasel/WeaselTSF/Globals.h
++++ weasel/WeaselTSF/Globals.h
+@@ -1,5 +1,7 @@
+ #pragma once
+
++namespace ektro { extern volatile bool g_force_show_candidates; }
++
+ // ... 原有声明保留 ...

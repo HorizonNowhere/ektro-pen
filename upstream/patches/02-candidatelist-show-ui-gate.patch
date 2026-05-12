@@ -1,0 +1,23 @@
+--- weasel/WeaselTSF/CandidateList.cpp
++++ weasel/WeaselTSF/CandidateList.cpp
+@@ -361,11 +361,21 @@
+ void WeaselTSF::_EndUI() {
+   _cand->EndUI();
+ }
+
++// EKTRO patch (D-006 / D-011): 默认隐藏候选窗 (公理 ① 不打断视线)
++// g_force_show_candidates 由 KeyEventSink 长按 Ctrl 时设为 true
++namespace ektro {
++    volatile bool g_force_show_candidates = false;
++}
++
+ void WeaselTSF::_ShowUI() {
++  if (!ektro::g_force_show_candidates) {
++    return;  // EKTRO 默认不显示候选窗
++  }
+   _cand->Show(TRUE);
+ }
+
+ void WeaselTSF::_HideUI() {
+   _cand->Show(FALSE);
+ }

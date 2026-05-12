@@ -1,0 +1,53 @@
+--- weasel/WeaselTSF/KeyEventSink.cpp
++++ weasel/WeaselTSF/KeyEventSink.cpp
+@@ -3,6 +3,9 @@
+ #include "WeaselTSF.h"
+ #include <KeyEvent.h>
+ #include "CandidateList.h"
++#include <chrono>
++
++namespace ektro { extern volatile bool g_force_show_candidates; }
+
+ static weasel::KeyEvent prevKeyEvent;
+ static BOOL prevfEaten = FALSE;
+ static int keyCountToSimulate = 0;
+@@ -10,6 +13,40 @@
+ void WeaselTSF::_ProcessKeyEvent(WPARAM wParam, LPARAM lParam, BOOL* pfEaten) {
++  // EKTRO patch (D-006 / D-011): 长按 Ctrl 500ms 唤起应急候选窗
++  {
++    using namespace std::chrono;
++    static steady_clock::time_point ctrl_down_time{};
++    static bool ctrl_held = false;
++    bool is_ctrl = (wParam == VK_CONTROL || wParam == VK_LCONTROL || wParam == VK_RCONTROL);
++    bool is_keyup = (lParam & 0x80000000) != 0;
++
++    if (is_ctrl && !is_keyup) {
++      if (!ctrl_held) {
++        ctrl_down_time = steady_clock::now();
++        ctrl_held = true;
++      } else {
++        auto held_ms = duration_cast<milliseconds>(
++            steady_clock::now() - ctrl_down_time).count();
++        if (held_ms >= 500 && !ektro::g_force_show_candidates) {
++          ektro::g_force_show_candidates = true;
++          _ShowUI();
++        }
++      }
++    } else if (is_ctrl && is_keyup) {
++      ctrl_held = false;
++      if (ektro::g_force_show_candidates) {
++        ektro::g_force_show_candidates = false;
++        _HideUI();
++      }
++    }
++
++    // EKTRO: Tab 键后强制刷 inline composition (D-006)
++    if (wParam == VK_TAB && !is_keyup) {
++      // librime 已处理 Tab 改变候选; 这里只触发 UI 更新
++      // 由后续 _UpdateComposition 调用完成 (无需额外代码)
++    }
++  }
++
+   // when _IsKeyboardDisabled don't eat the key,
+   // when keyboard closable and keyboard closed, don't eat the key
+   if ((_isToOpenClose && !_IsKeyboardOpen()) || _IsKeyboardDisabled()) {

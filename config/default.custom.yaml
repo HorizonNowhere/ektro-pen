@@ -1,0 +1,34 @@
+# EKTRO 默认用户配置 (D-006 + D-011)
+#
+# 安装位置: %APPDATA%\Rime\default.custom.yaml
+# 作用: 启用 inline preedit (公理 ① 不打断视线)
+#
+# 重新部署: 右键托盘 → 重新部署，或运行 WeaselDeployer.exe
+
+patch:
+  # ──────────── EKTRO 核心配置 ────────────
+
+  # 开启 inline preedit (默认 weasel 是 false)
+  # 让中文直接写到光标位, 应用以 composition 样式渲染
+  style/inline_preedit: true
+
+  # 候选窗水平排列 (虽默认隐藏, 长按 Ctrl 唤起时也要排版)
+  style/horizontal: false
+
+  # 系统托盘图标默认显示
+  style/display_tray_icon: true
+
+  # ──────────── 词库选型 ────────────
+  # 取消注释以启用 (需先放对应 schema/dict 到 ~/.config/rime/)
+
+  # 万象拼音 (推荐, amzxyz 32GB 语料 8-gram)
+  # schema_list/@next:
+  #   schema: rime_wanxiang
+
+  # 或: 雾凇拼音 (iDvel/rime-ice, 长期维护简体词库)
+  # schema_list/@next:
+  #   schema: rime_ice
+
+  # ──────────── EKTRO 高级 (未来) ────────────
+  # 注册 EKTRO rerank filter (需 ektro_plugin.dll 编译到位)
+  # engine/filters/@before 0: lua_filter@ektro_rerank

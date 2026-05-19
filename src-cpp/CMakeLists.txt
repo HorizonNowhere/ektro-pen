@@ -19,6 +19,13 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 option(EKTRO_BUILD_TESTS "Build cross-check unit tests" ON)
 
+set(EKTRO_PLATFORM "windows" CACHE STRING "windows|macos|android|ios")
+message(STATUS "EKTRO_PLATFORM=${EKTRO_PLATFORM}")
+# macOS/iOS 前端用 Swift, 需要 C ABI 静态库; Android 需要 .so
+if(EKTRO_PLATFORM STREQUAL "android")
+    set(BUILD_SHARED_LIBS ON)
+endif()
+
 # ────────── 依赖 ──────────
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)
@@ -57,6 +64,7 @@ add_library(ektro STATIC
     src/log.cpp
     src/predictor_client.cpp
     src/async_trigger.cpp
+    src/ektro_sdk.cpp
     src/bridge.cpp
 )
 target_include_directories(ektro PUBLIC include)
@@ -111,6 +119,7 @@ if(EKTRO_BUILD_TESTS)
         tests/test_memory_store.cpp
         tests/test_baseline_reranker.cpp
         tests/test_baseline_predictor.cpp
+        tests/test_c_abi.cpp
     )
     target_link_libraries(ektro_tests PRIVATE ektro GTest::gtest GTest::gtest_main)
     add_test(NAME ektro_tests COMMAND ektro_tests)

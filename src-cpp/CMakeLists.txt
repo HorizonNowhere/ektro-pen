@@ -15,6 +15,13 @@ endif()
 
 option(EKTRO_BUILD_TESTS "Build cross-check unit tests" ON)
 
+set(EKTRO_PLATFORM "windows" CACHE STRING "windows|macos|android|ios")
+message(STATUS "EKTRO_PLATFORM=${EKTRO_PLATFORM}")
+# macOS/iOS 前端用 Swift, 需要 C ABI 静态库; Android 需要 .so
+if(EKTRO_PLATFORM STREQUAL "android")
+    set(BUILD_SHARED_LIBS ON)
+endif()
+
 # ────────── 依赖 ──────────
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)

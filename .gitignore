@@ -39,6 +39,20 @@ src-cpp/third_party/shell.c
 
 # ─────── 编译产物 ───────
 
+# 便携安装包 staging + zip (构建输出, 不进源码仓库; 走 GitHub Release)
+dist/
+
+# 构建 / 注册 过程标记与日志 (主目录运行时生成)
+BUILD_LOG.txt
+BUILD_DONE_MARKER.txt
+DEPLOY_LOG.txt
+INSTALL_ALL_LOG.txt
+INSTALL_ALL_MARKER.txt
+REGISTER_LOG.txt
+REGISTER_MARKER.txt
+DIAG_GLOG_LOG.txt
+DIAG_GLOG_MARKER.txt
+
 src-cpp/build/
 *.obj
 *.lib

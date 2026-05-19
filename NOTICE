@@ -1,0 +1,58 @@
+EKTRO
+Copyright 2026 EKTRO Project Contributors
+
+This product includes software developed by the EKTRO Project.
+
+EKTRO 自有源码（本仓库内 src/、src-cpp/、config/、tests/、docs/、
+openspec/ 以及 upstream/patches/ 下的补丁）以 Apache License 2.0 授权，
+许可全文见 LICENSE 文件。
+
+================================================================================
+第三方组件 / Third-Party Components
+================================================================================
+
+EKTRO 在构建与分发时依赖以下上游项目。各组件保留其各自的原始许可证；
+EKTRO 的 Apache-2.0 授权不覆盖、不改变这些组件的许可条款。
+
+1. weasel（小狼毫输入法前端）
+   - 来源: https://github.com/rime/weasel
+   - 许可: GNU General Public License v3.0 (GPL-3.0)
+   - 说明: EKTRO fork 自 weasel 并应用了 3 个补丁（见 upstream/patches/）。
+     便携包中分发的 weasel.dll / weaselx64.dll / WeaselServer.exe /
+     WeaselDeployer.exe / WeaselSetup.exe 为 weasel（含 EKTRO 补丁）的
+     编译产物，受 GPL-3.0 约束。源码与补丁均已公开。
+
+2. librime / RIME 中州韵输入法引擎
+   - 来源: https://github.com/rime/librime
+   - 许可: BSD 3-Clause License
+   - 说明: 便携包中的 rime.dll 为其编译产物。
+
+3. RIME 配方 / 词库数据（便携包 weasel/data/ 内的 *.yaml、essay.txt、
+   *.dict.yaml、color_scheme 预览图等）
+   - 来源: https://github.com/rime/rime-prelude 及相关 rime-* 仓库
+   - 许可: 见各上游仓库（多为 GPL-3.0 / LGPL / 公有领域，混合）
+
+4. 便携包内随附的辅助二进制及其许可文本（weasel/ 目录内）
+   - 7-Zip          (weasel/7-zip-license.txt)
+   - curl           (weasel/COPYING-curl.txt)
+   - WinSparkle     (见上游 WinSparkle 项目，MIT)
+   - 完整上游许可汇总见 weasel/LICENSE.txt
+
+5. 源码内 vendored 的 header-only 库（src-cpp/third_party/）
+   - cpp-httplib    : MIT License
+   - nlohmann/json  : MIT License
+   - SQLite (amalgamation, 用户按 INSTALL 单独获取): Public Domain
+
+6. 端侧预测模型（不随仓库或便携包分发，用户自行下载）
+   - Qwen3-0.6B     : Apache License 2.0（阿里巴巴通义千问团队）
+
+================================================================================
+关于二进制分发的许可说明
+================================================================================
+
+便携安装包（EKTRO-v0.1-portable-win64.zip）作为一个整体包含 weasel 的
+编译二进制，因此该二进制分发整体受 GPL-3.0 约束：你有权获取并修改其完整
+对应源码（weasel 上游 + 本仓库 upstream/patches/ 内的 EKTRO 补丁）。
+
+EKTRO 自身贡献的源代码（reranker / memory store / predictor / context
+builder 等）独立以 Apache-2.0 授权，可单独按 Apache-2.0 条款使用。

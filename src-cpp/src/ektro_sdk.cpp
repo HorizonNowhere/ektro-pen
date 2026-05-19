@@ -30,4 +30,24 @@ void ektro_destroy(ektro_ctx* c) { delete c; }
 
 const char* ektro_last_error(ektro_ctx* c) { return c ? c->last_error.c_str() : ""; }
 
+void ektro_set_password_field(ektro_ctx* c, int is_password) {
+    if (c) c->password_field = is_password;
+}
+
+int ektro_log_commit(ektro_ctx* c, const char* input_raw,
+                     const char* output_cjk, int is_password_field) {
+    if (!c || !c->store) return 1;
+    try {
+        ektro::EktroMemoryStore::LogCommitArgs a;
+        a.input_raw = input_raw ? input_raw : "";
+        a.output = output_cjk ? output_cjk : "";
+        a.is_password_field = is_password_field || c->password_field;
+        c->store->log_commit(a);
+        return 0;
+    } catch (const std::exception& e) {
+        c->last_error = e.what();
+        return 1;
+    }
+}
+
 }  // extern "C"

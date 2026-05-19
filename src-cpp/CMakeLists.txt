@@ -2,7 +2,7 @@
 # 集成进 weasel 时会被合并进 weasel CMakeLists.txt
 
 cmake_minimum_required(VERSION 3.16)
-project(ektro CXX)
+project(ektro C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,6 +12,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
+
+# D-015: 静态 CRT (/MT) 以匹配 weasel —— 集成进 weaselx64.dll 时
+# CRT 必须一致 (/MT vs /MD ABI 不兼容会 LNK2038 / 跨堆崩溃)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 option(EKTRO_BUILD_TESTS "Build cross-check unit tests" ON)
 
@@ -53,6 +57,7 @@ add_library(ektro STATIC
     src/log.cpp
     src/predictor_client.cpp
     src/async_trigger.cpp
+    src/bridge.cpp
 )
 target_include_directories(ektro PUBLIC include)
 

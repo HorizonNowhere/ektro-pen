@@ -1,0 +1,76 @@
+# D-016 — 端侧个性化 rerank 接入 weasel (文档式 patch, 同 01-03 风格)
+#
+# weasel-master/ 为 gitignore 的第三方源, 此文件记录 D-016 对其的全部改动,
+# 供 INSTALL.md 重拉 weasel 后复现。配套: src-cpp/{include/ektro/bridge.h,
+# src/bridge.cpp} (已 git 跟踪)。详见 docs/decisions.md D-016。
+
+--- weasel/include/RimeWithWeasel.h
++++ weasel/include/RimeWithWeasel.h
+@@ class RimeWithWeaselHandler @@
+   void _GetCandidateInfo(weasel::CandidateInfo& cinfo, RimeContext& ctx);
++  // EKTRO D-015: 个性化 rerank (通过 librime highlight, 不重排显示)
++  void _EktroApplyRerank(RimeSessionId session_id, RimeContext& ctx);
+
+--- weasel/RimeWithWeasel/RimeWithWeasel.cpp
++++ weasel/RimeWithWeasel/RimeWithWeasel.cpp
+@@ 顶部 includes 之后 @@
++#include <ektro/bridge.h>      // C++17 安全窄接口 (C++20 隔离在 ektro.lib)
++#include <shlobj.h>
++namespace {
++  // Meyers singleton: 线程安全恰好一次 (消除 done flag 数据竞争)。
++  // SOP#8: std::filesystem 可抛 → try/catch + LOG(ERROR), 不逸出。
++  void ektro_lazy_init();   // 见 bridge.h; db=%APPDATA%\Rime\ektro.db
++}
+@@ _GetCandidateInfo @@
+   # 还原为 librime 原生顺序 (不再重排 cinfo) → 选词键/标签恒正确。
+   # 新增独立 _EktroApplyRerank(session_id, ctx):
+   #   n<2 直通; 取 ektro_bridge::rerank_order()[0]=best;
+   #   rime_api->highlight_candidate_on_current_page(session,best);
+   #   highlight 成功则 free 旧 ctx + 重新 get_context → inline/空格/候选窗一致
+@@ 两处 _GetCandidateInfo(cinfo,ctx) 调用点 (has_candidates / num_candidates) @@
++      _EktroApplyRerank(session_id, ctx);  // EKTRO D-015
+       _GetCandidateInfo(cinfo, ctx);
+@@ get_commit 落点 @@
++    if (commit.text && commit.text[0]) {
++      ektro_lazy_init();
++      ektro_bridge::log_commit(std::string(commit.text));  // 公理② 明文落库
++    }
+
+--- weasel/RimeWithWeasel/RimeWithWeasel.vcxproj  (仅 Release|x64)
++++ weasel/RimeWithWeasel/RimeWithWeasel.vcxproj
+@@ ClCompile @@
+-  <AdditionalIncludeDirectories>$(SolutionDir)\include;...
++  <AdditionalIncludeDirectories>$(SolutionDir)..\..\src-cpp\include;$(SolutionDir)\include;...
+   # LanguageStandard 保持 stdcpp17 (bridge.h 已隔离 C++20, 无需升级)
+
+--- weasel/WeaselServer/WeaselServer.vcxproj  (仅 Release|x64 Link)
++++ weasel/WeaselServer/WeaselServer.vcxproj
+@@ Link @@
+-  <AdditionalDependencies>imm32.lib;usp10.lib;rime.lib;...
++  <AdditionalDependencies>imm32.lib;usp10.lib;rime.lib;ektro.lib;ektro_sqlite3.lib;...
+-  <AdditionalLibraryDirectories>$(SolutionDir)\lib64;...
++  <AdditionalLibraryDirectories>$(SolutionDir)..\..\src-cpp\build;$(SolutionDir)\lib64;...
+
+--- weasel/build.bat   (D-015 构建链, x64-only Win11)
++++ weasel/build.bat
+@@ librime 编排 @@   rem 跳过 Win32 librime (x64-only)
+@@ msbuild weasel.sln @@   rem 跳过 Win32 weasel.sln (无 32 位 boost)
+@@ :build_librime_platform 头 @@
++  if exist dist_%1\lib\rime.dll goto librime_copy   rem 用预编译 librime 1.16.1
+
+--- weasel/librime/build.bat
++++ weasel/librime/build.bat
+@@ -G/-A/-T 段 @@
++  if /I "%CMAKE_GENERATOR%"=="Ninja" goto skip_arch_toolset  rem Ninja 不认 -A/-T
+
+--- weasel/librime/env.bat   (整文件覆盖)
++++ weasel/librime/env.bat
+   set RIME_ROOT=%CD%
+   if not defined BOOST_ROOT set BOOST_ROOT=E:\bx
+-  set CMAKE_GENERATOR="Visual Studio 16 2019"   # VS2019 未装 + 引号入值致 if 崩
++  set CMAKE_GENERATOR=Ninja                      # 无引号 (引号会成为值的一部分)
+   set BJAM_TOOLSET=msvc-14.3
+   set PLATFORM_TOOLSET=v143
+
+# 预编译 librime: github.com/rime/librime releases 1.16.1
+#   rime-de4700e-Windows-msvc-x64.7z → 解压填充 weasel/librime/dist_x64/

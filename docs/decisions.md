@@ -1421,4 +1421,55 @@ EKTRO v0.1 真正落地的距离: **<= 60 分钟**。
 
 ---
 
-## D-016 — [待填]
+## D-016 — 端侧个性化 rerank 接入 weasel + 4 维 Swarm 验收
+
+**日期**: 2026-05-19 · **状态**: 已落地 (代码标记沿用 `D-015` 作 grep 锚)
+
+### 背景
+
+D-015 完成 weasel/librime 全量编译 + IME 注册 + 引擎验证
+(`nihaoshijie → 你好世界`)。但 `ektro.lib` (个性化 rerank, 22 测试) **从未接进运行二进制** —— 装好的只是「砍候选窗的优质 librime」, 个性化层是死代码。本决策把它真正接通。
+
+### 决策
+
+| # | 决策 | 理由 |
+|---|------|------|
+| 1 | **C-API 边界 post-process, 不做 librime Filter** | 预编译 librime 1.16.1 无内部头, 无法编 Filter 子类。改在 `RimeWithWeasel` 读 C-API 候选处接入 —— 解耦, 符合「双进程崩溃隔离」精神 |
+| 2 | **rerank 通过 `highlight_candidate_on_current_page` 实现, 不重排 cinfo** | Swarm 揭示: 只重排显示数组会让选词键/标签错位、inline≠提交。改为只移动 librime highlight → inline / 空格 / 候选窗三者天然一致, 选词键恒正确 |
+| 3 | **`ektro_bridge` 窄接口隔离 C++20/C++17** | weasel 整体升 C++20 连环崩 (char8_t / accumulate)。bridge.h 只暴露 vector/string + noexcept, 全部 std::span 关进 ektro.lib。weasel 一行标准没改 |
+| 4 | **ektro.lib 强制 `/MT`** | 与 weasel CRT 一致, 否则 LNK2038 / 跨堆崩溃 |
+| 5 | **失败一律直通 + 必 log (SOP#8)** | 任何异常 → 退化为纯 librime (绝不破坏打字), 但 catch 必接 logger; 公理② 不记候选/commit 文本 |
+
+### 变更面 (≤ 本决策范围)
+
+- 新增: `src-cpp/include/ektro/bridge.h`, `src-cpp/src/bridge.cpp`
+- 改: `src-cpp/CMakeLists.txt` (bridge.cpp + /MT + `project(ektro C CXX)`)
+- 改: `RimeWithWeasel.{cpp,h}` (`_EktroApplyRerank` + `ektro_lazy_init` + commit 落库)
+- 改: `RimeWithWeasel.vcxproj` (ektro include), `WeaselServer.vcxproj` (link ektro.lib)
+- 构建链 patch: `build-everything.bat` (Ninja + C 语言 + serialization), `librime/{build.bat,env.bat}`, `weasel/build.bat` (跳源码 librime + Win32), 预编译 librime 1.16.1
+
+### Agent Swarm 验收 (SOP#7, 4 独立维度)
+
+| 维度 | 结论 | 处置 |
+|------|------|------|
+| 代码质量 | 发现 select_keys/highlighted 错位 (重排显示的根本缺陷) | 改 highlight 方案根除 |
+| 静默失败 | `ektro_lazy_init` 可抛未捕获; 缺 noexcept; 掩盖故障无 log | 全修 (Meyers singleton + noexcept + log) |
+| 测试覆盖 | bridge 层无测试; 可自用, **Cycle 2 前须补 `test_bridge.cpp`** | 列为 Cycle 2 准入条件 |
+| 接口设计 | `done` flag 数据竞争 (并发首调); ABI 契约不显式 | Meyers singleton 消竞争; bridge.h 加 `#error` /MT 守卫 |
+
+### 遗留 (Cycle 2 准入条件)
+
+1. **`test_bridge.cpp`** —— 覆盖 permutation 合法性/round-trip/直通分支 (pr-test 指认的最高价值缺口)
+2. `context`/`recent_outputs` 参数已预留但调用方传空, 待接 24h 上下文锁定
+3. GRU ~20M rerank (路线图 Week 4) —— 当前是 4 特征 BaselineReranker
+
+### 结论
+
+EKTRO v0.1 从「砍候选窗的 librime」进化到「含端侧个性化的完整 EKTRO」:
+冷启动中性 (空 ektro.db → rime_prior 主导, 不劣化), 随打字
+`%APPDATA%\Rime\ektro.db` 积累 word_freq/bigram → 渐进「越用越懂你」。
+所有数据明文本地 (公理②)。22 测试 + 4 维 Swarm 通过, 自用可发。
+
+---
+
+## D-017 — [待填]

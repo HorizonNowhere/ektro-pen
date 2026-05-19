@@ -145,3 +145,30 @@ TEST(CAbi, PasswordInputNeverPersisted) {
     std::remove(pw_path.c_str());
     std::remove(ok_path.c_str());
 }
+
+// ─── Task A3: ektro_rerank_order 新增测试 ────────────────────────────────────
+
+TEST(CAbi, RerankOrderReturnsValidPermutationOrPassthrough) {
+    ektro_config cfg{ EKTRO_PREDICTOR_BASELINE, nullptr };
+    ektro_ctx* c = ektro_create(":memory:", &cfg);
+    int ord[8]; int n = -1;
+    int rc = ektro_rerank_order(c, "你好\n您好\n泥嚎", "", nullptr, ord, 8, &n);
+    EXPECT_EQ(rc, 0);
+    // 直通 (n==0) 或 完整排列 (n==3 且为 [0,3) 的排列)
+    if (n != 0) {
+        ASSERT_EQ(n, 3);
+        bool seen[3] = {false,false,false};
+        for (int i = 0; i < n; ++i) { ASSERT_GE(ord[i],0); ASSERT_LT(ord[i],3); seen[ord[i]]=true; }
+        EXPECT_TRUE(seen[0]&&seen[1]&&seen[2]);
+    }
+    ektro_destroy(c);
+}
+TEST(CAbi, RerankOrderTooSmallBufErrors) {
+    ektro_config cfg{ EKTRO_PREDICTOR_BASELINE, nullptr };
+    ektro_ctx* c = ektro_create(":memory:", &cfg);
+    int ord[1]; int n=-1;
+    int rc = ektro_rerank_order(c, "你好\n您好\n泥嚎", "", nullptr, ord, 1, &n);
+    if (rc != 0) { EXPECT_EQ(n,0); EXPECT_STRNE(ektro_last_error(c), ""); }
+    else { EXPECT_EQ(n,0); }  // 也可能直通(n=0)，两者都合法
+    ektro_destroy(c);
+}

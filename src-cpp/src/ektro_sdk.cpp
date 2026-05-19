@@ -6,6 +6,7 @@
 #include "ektro/predictor.h"
 #include <memory>
 #include <new>
+#include <span>
 #include <string>
 #include <sstream>
 #include <cstring>
@@ -130,6 +131,76 @@ int ektro_memory_clear(ektro_ctx* c) {
     try { c->store->clear_all(true); return 0; }
     catch (const std::exception& e) { c->last_error = e.what(); return 1; }
     catch (...) { c->last_error = "unknown error"; return 1; }  // FIX M-1
+}
+
+// ─── ektro_rerank_order ───
+// 排列版 rerank：out_order[new_rank] = base_rank。
+// 直通(候选<2) → *out_n=0, return 0 (合法 no-op，非错误)。
+// 容量不足 / 排列非法 / 大小不符 → return 非0, *out_n=0, last_error 设置。
+int ektro_rerank_order(ektro_ctx* c, const char* cands_joined, const char* context,
+                       const char* recent_joined, int* out_order,
+                       int order_cap, int* out_n) {
+    if (out_n) *out_n = 0;
+    if (!c || !c->store) return 1;
+    c->last_error.clear();  // FIX M-3 一致性
+    try {
+        // 分割候选
+        std::vector<std::string> cands;
+        {
+            std::string s(cands_joined ? cands_joined : ""), tok;
+            std::stringstream ss(s);
+            while (std::getline(ss, tok, '\n')) if (!tok.empty()) cands.push_back(tok);
+        }
+        // 候选<2 → 合法直通，不报错
+        if (cands.size() < 2) { if (out_n) *out_n = 0; return 0; }
+
+        // 分割最近输出
+        std::vector<std::string> recent;
+        if (recent_joined && recent_joined[0] != '\0') {
+            std::string rs(recent_joined), tok;
+            std::stringstream ss(rs);
+            while (std::getline(ss, tok, '\n')) if (!tok.empty()) recent.push_back(tok);
+        }
+
+        const std::size_t n = cands.size();
+
+        // 容量检查
+        if ((int)n > order_cap) {
+            c->last_error = "order buf too small";
+            if (out_n) *out_n = 0;
+            return 3;
+        }
+
+        ektro::BaselineReranker rr(*c->store);
+        auto ranked = rr.rerank(
+            std::span<const std::string>(cands.data(), cands.size()),
+            context ? context : "",
+            std::span<const std::string>(recent.data(), recent.size()));
+
+        // 大小不符 → 报错
+        if (ranked.size() != n) {
+            c->last_error = "rerank size mismatch";
+            if (out_n) *out_n = 0;
+            return 4;
+        }
+
+        // 构建排列：out_order[new_rank] = base_rank
+        std::vector<int> order(n, -1);
+        for (const auto& rc : ranked) {
+            if (rc.base_rank >= n || rc.new_rank >= n || order[rc.new_rank] != -1) {
+                c->last_error = "invalid permutation";
+                if (out_n) *out_n = 0;
+                return 4;
+            }
+            order[rc.new_rank] = static_cast<int>(rc.base_rank);
+        }
+
+        // 写出
+        for (std::size_t i = 0; i < n; ++i) out_order[i] = order[i];
+        if (out_n) *out_n = static_cast<int>(n);
+        return 0;
+    } catch (const std::exception& e) { c->last_error = e.what(); if (out_n) *out_n = 0; return 1; }
+      catch (...) { c->last_error = "unknown error"; if (out_n) *out_n = 0; return 1; }
 }
 
 int ektro_memory_export(ektro_ctx* c, const char* out_path) {

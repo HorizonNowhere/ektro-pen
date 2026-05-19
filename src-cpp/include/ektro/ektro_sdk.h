@@ -28,6 +28,14 @@ int  ektro_log_commit(ektro_ctx*, const char* input_raw,
 /* rerank: cands_in 是 '\n' 分隔候选; 结果写入调用方提供的 buf(同格式) */
 int  ektro_rerank(ektro_ctx*, const char* cands_in, char* buf, int buf_len);
 
+/* rerank 排列版: cands_joined / recent_joined 为 '\n' 分隔(recent_joined 可为 NULL/空)。
+   成功返回 0; 若产出完整排列则 *out_n = 候选数, out_order[new_rank] = base_rank;
+   若直通(候选<2 / 无 reranker / 内部判定不重排)则返回 0 且 *out_n = 0。
+   out_order 容量不足 / 内部故障 → 返回非0 且设置 last_error, *out_n = 0。 */
+int ektro_rerank_order(ektro_ctx*, const char* cands_joined, const char* context,
+                       const char* recent_joined, int* out_order,
+                       int order_cap, int* out_n);
+
 /* predict: ctx 上下文 → 续写写入 buf */
 int  ektro_predict(ektro_ctx*, const char* ctx, char* buf, int buf_len);
 

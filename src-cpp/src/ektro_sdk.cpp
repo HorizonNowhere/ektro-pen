@@ -7,6 +7,8 @@
 #include <string>
 #include <sstream>
 #include <cstring>
+#include <cstdio>
+#include <optional>
 #include <vector>
 
 struct ektro_ctx {
@@ -98,6 +100,25 @@ int ektro_predict(ektro_ctx* c, const char* ctx, char* buf, int buf_len) {
         ektro::BaselinePredictor p(*c->store);
         ektro::PredictionResult result = p.predict(ctx ? ctx : "");
         return write_buf(c, result.text, buf, buf_len);
+    } catch (const std::exception& e) { c->last_error = e.what(); return 1; }
+}
+
+int ektro_memory_clear(ektro_ctx* c) {
+    if (!c || !c->store) return 1;
+    try { c->store->clear_all(true); return 0; }
+    catch (const std::exception& e) { c->last_error = e.what(); return 1; }
+}
+
+int ektro_memory_export(ektro_ctx* c, const char* out_path) {
+    if (!c || !c->store) return 1;
+    try {
+        if (!out_path) { c->last_error = "out_path null"; return 2; }
+        FILE* f = std::fopen(out_path, "w");
+        if (!f) { c->last_error = "cannot open out_path"; return 3; }
+        for (const auto& r : c->store->recent_outputs(100000, std::nullopt))
+            std::fprintf(f, "%s\n", r.output.c_str());
+        std::fclose(f);
+        return 0;
     } catch (const std::exception& e) { c->last_error = e.what(); return 1; }
 }
 

@@ -60,3 +60,11 @@ TEST(CAbi, BufTooSmallSetsErrorNotOverflow) {
     EXPECT_STRNE(ektro_last_error(c), "");
     ektro_destroy(c);
 }
+
+TEST(CAbi, MemoryClearThenExportEmpty) {
+    ektro_config cfg{ EKTRO_PREDICTOR_BASELINE, nullptr };
+    ektro_ctx* c = ektro_create(":memory:", &cfg);
+    ektro_log_commit(c, "nihao", "你好", 0);
+    EXPECT_EQ(ektro_memory_clear(c), 0);
+    ektro_destroy(c);
+}

@@ -16,6 +16,9 @@ typedef struct {
 } ektro_config;
 
 /* 返回码: 0=OK, 非0=错误, 详情见 ektro_last_error */
+/* 注意: ektro_create 始终返回非 null 句柄，但初始化可能失败 —— 调用方必须在
+   ektro_create 返回后立即检查 ektro_last_error(ctx) 为空才能确认初始化成功。
+   唯一例外: OOM 导致 ctx 本身无法分配时返回 nullptr。 */
 ektro_ctx* ektro_create(const char* db_path, const ektro_config* cfg);
 void       ektro_destroy(ektro_ctx*);
 

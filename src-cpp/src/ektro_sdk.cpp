@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 #include "ektro/ektro_sdk.h"
 #include "ektro/memory_store.h"
+#include "ektro/reranker.h"
+#include "ektro/predictor.h"
 #include <memory>
 #include <string>
+#include <sstream>
+#include <cstring>
+#include <vector>
 
 struct ektro_ctx {
     std::unique_ptr<ektro::EktroMemoryStore> store;
@@ -48,6 +53,52 @@ int ektro_log_commit(ektro_ctx* c, const char* input_raw,
         c->last_error = e.what();
         return 1;
     }
+}
+
+// ─── 静态辅助：安全写 buf（无溢出），D-009 绝不静默 ───
+static int write_buf(ektro_ctx* c, const std::string& s, char* buf, int n) {
+    if (!buf || n <= 0) { c->last_error = "buf invalid"; return 2; }
+    if ((int)s.size() + 1 > n) { c->last_error = "buf too small"; return 3; }
+    std::memcpy(buf, s.c_str(), s.size() + 1);
+    return 0;
+}
+
+// ─── ektro_rerank ───
+// 适配要点：
+//   BaselineReranker ctor 接受 MemoryView&（EktroMemoryStore 继承链满足）
+//   rerank() 返回 vector<RankedCandidate>，需提取 .candidate 字段
+//   候选以 '\n' 分隔输入，同格式输出（按 new_rank 顺序）
+int ektro_rerank(ektro_ctx* c, const char* cands_in, char* buf, int buf_len) {
+    if (!c || !c->store) return 1;
+    try {
+        ektro::BaselineReranker rr(*c->store);
+        std::vector<std::string> in;
+        std::string s(cands_in ? cands_in : ""), tok;
+        std::stringstream ss(s);
+        while (std::getline(ss, tok, '\n')) if (!tok.empty()) in.push_back(tok);
+        auto ranked = rr.rerank(std::span<const std::string>(in));
+        // 提取 .candidate 字段拼 joined
+        std::string joined;
+        for (size_t i = 0; i < ranked.size(); ++i) {
+            if (i) joined += '\n';
+            joined += ranked[i].candidate;
+        }
+        return write_buf(c, joined, buf, buf_len);
+    } catch (const std::exception& e) { c->last_error = e.what(); return 1; }
+}
+
+// ─── ektro_predict ───
+// 适配要点：
+//   BaselinePredictor ctor 接受 MemoryView&
+//   predict() 返回 PredictionResult，需提取 .text 字段
+//   即使 text 为空也返回 0（测试 PredictBaselineReturnsZeroEvenWhenEmpty）
+int ektro_predict(ektro_ctx* c, const char* ctx, char* buf, int buf_len) {
+    if (!c || !c->store) return 1;
+    try {
+        ektro::BaselinePredictor p(*c->store);
+        ektro::PredictionResult result = p.predict(ctx ? ctx : "");
+        return write_buf(c, result.text, buf, buf_len);
+    } catch (const std::exception& e) { c->last_error = e.what(); return 1; }
 }
 
 }  // extern "C"

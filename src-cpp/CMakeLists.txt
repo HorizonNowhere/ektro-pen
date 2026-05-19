@@ -53,6 +53,7 @@ add_library(ektro STATIC
     src/log.cpp
     src/predictor_client.cpp
     src/async_trigger.cpp
+    src/ektro_sdk.cpp
 )
 target_include_directories(ektro PUBLIC include)
 
@@ -106,6 +107,7 @@ if(EKTRO_BUILD_TESTS)
         tests/test_memory_store.cpp
         tests/test_baseline_reranker.cpp
         tests/test_baseline_predictor.cpp
+        tests/test_c_abi.cpp
     )
     target_link_libraries(ektro_tests PRIVATE ektro GTest::gtest GTest::gtest_main)
     add_test(NAME ektro_tests COMMAND ektro_tests)

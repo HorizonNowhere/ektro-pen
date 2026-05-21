@@ -152,6 +152,58 @@ def cmd_pending(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_daemon(args: argparse.Namespace) -> int:
+    """常驻守护进程 — 与 IME 主进程并行跑,后台 sync。
+
+    生命周期:
+    - SIGINT / SIGTERM 优雅停止 (等当前 sync 周期完成)
+    - 凭证失效 (link_invalid) 自动退出 (TokenManager 已清状态)
+    - 用 nohup / systemd / launchctl 启动持久化
+
+    NOTE: 这是 v0.4 release 之前的临时方式. 正式打包后改为
+          launchctl plist (macOS) / systemd service (Linux) / Windows service.
+    """
+    import signal
+
+    conn, lock, link_store, tm, sc = _open_full()
+    if not tm.is_linked():
+        print("未链接 — 先跑 `python -m auth link`", file=sys.stderr)
+        return 1
+
+    daemon = uploader_module.UploaderDaemon(
+        conn=conn, lock=lock,
+        link_store=link_store, token_manager=tm, sync_client=sc,
+        sync_interval=args.interval,
+        heartbeat_interval=args.heartbeat_interval,
+    )
+
+    def _shutdown(signum, frame):
+        print(f"\n收到信号 {signum},优雅停止...")
+        daemon.stop(timeout=15)
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
+    print(f"ektro-pen sync daemon 启动")
+    print(f"  device:   {link_store.get_device_link().device_id}")
+    print(f"  endpoint: {link_store.get_device_link().ektro_endpoint}")
+    print(f"  sync:     每 {args.interval}s")
+    print(f"  heartbeat:每 {args.heartbeat_interval}s")
+    print(f"  ctrl-c 退出")
+
+    daemon.start()
+    try:
+        # 主线程等子线程自然结束 (link_invalid 时子线程自己退)
+        while daemon._thread and daemon._thread.is_alive():
+            daemon._thread.join(timeout=1)
+        print("\nsync daemon 退出 (可能链接已失效,跑 python -m auth status 查状态)")
+        return 0
+    except KeyboardInterrupt:
+        _shutdown(signal.SIGINT, None)
+        return 0
+
+
 def cmd_heartbeat(args: argparse.Namespace) -> int:
     _, _, link_store, tm, sc = _open_full()
     if not tm.is_linked():
@@ -194,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("pending", help="查看待上传数 + cursor")
     sub.add_parser("heartbeat", help="立刻发一次心跳 + 拉删除通告")
 
+    pd = sub.add_parser("daemon", help="常驻守护进程 (与 IME 并行跑后台 sync)")
+    pd.add_argument("--interval", type=int, default=300,
+                    help="sync 周期秒 (默认 300=5min)")
+    pd.add_argument("--heartbeat-interval", type=int, default=3600,
+                    help="heartbeat 周期秒 (默认 3600=1h)")
+
     return p
 
 
@@ -204,6 +262,7 @@ def main() -> int:
         "backfill": cmd_backfill,
         "pending": cmd_pending,
         "heartbeat": cmd_heartbeat,
+        "daemon": cmd_daemon,
     }
     try:
         return handlers[args.cmd](args)

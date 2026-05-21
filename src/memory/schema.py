@@ -13,7 +13,7 @@ EktroMemoryStore SQLite schema.
 """
 from __future__ import annotations
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 # 完整 schema (v1)
 SCHEMA_V1 = """
@@ -62,6 +62,68 @@ CREATE TABLE IF NOT EXISTS config (
 );
 """
 
+# v2 新增：ime-twin-link 链接基础设施
+# 详见 docs/local-memory-schema.md §3
+SCHEMA_V2_ADDITIONS = """
+-- 设备元信息 + ektro 链接状态（单行 CHECK 强制一机一账号）
+CREATE TABLE IF NOT EXISTS device_link (
+    id              INTEGER PRIMARY KEY CHECK (id = 1),
+    device_id       TEXT    NOT NULL UNIQUE,
+    device_label    TEXT,
+    created_at      INTEGER NOT NULL,
+    linked_user_id     TEXT,
+    linked_user_handle TEXT,
+    linked_at          INTEGER,
+    revoked_at         INTEGER,
+    ektro_endpoint     TEXT NOT NULL DEFAULT 'https://ektroai.com'
+);
+
+-- 增量同步位点（单行）
+CREATE TABLE IF NOT EXISTS sync_cursor (
+    id                      INTEGER PRIMARY KEY CHECK (id = 1),
+    last_synced_commit_id   INTEGER NOT NULL DEFAULT 0,
+    last_sync_at            INTEGER,
+    last_attempt_at         INTEGER,
+    last_error              TEXT,
+    pending_count           INTEGER NOT NULL DEFAULT 0,
+    total_uploaded          INTEGER NOT NULL DEFAULT 0
+);
+
+-- 首次回填进度（单行）
+CREATE TABLE IF NOT EXISTS backfill_state (
+    id                      INTEGER PRIMARY KEY CHECK (id = 1),
+    mode                    TEXT,
+    started_at              INTEGER,
+    completed_at            INTEGER,
+    last_uploaded_commit_id INTEGER,
+    total_to_upload         INTEGER,
+    total_uploaded          INTEGER NOT NULL DEFAULT 0,
+    error                   TEXT
+);
+"""
+
+
+def _seed_v2_singleton_rows(conn) -> None:
+    """v2 三张单行表的初始化：device_id 首启生成 UUIDv4，cursor / backfill 占位行。"""
+    import time
+    import uuid
+    now_ms = int(time.time() * 1000)
+    conn.execute(
+        "INSERT OR IGNORE INTO device_link (id, device_id, created_at) VALUES (1, ?, ?)",
+        (str(uuid.uuid4()), now_ms),
+    )
+    conn.execute("INSERT OR IGNORE INTO sync_cursor (id) VALUES (1)")
+    conn.execute("INSERT OR IGNORE INTO backfill_state (id) VALUES (1)")
+
+
+def _migrate_v1_to_v2(conn) -> None:
+    """v1 → v2: ADD TABLE device_link / sync_cursor / backfill_state + seed 单行。
+
+    不动 v1 的 5 张表任何字段。详见 docs/local-memory-schema.md §6。
+    """
+    conn.executescript(SCHEMA_V2_ADDITIONS)
+    _seed_v2_singleton_rows(conn)
+
 
 def init_db(conn) -> int:
     """
@@ -73,14 +135,23 @@ def init_db(conn) -> int:
     current = cur.fetchone()[0]
 
     if current == 0:
-        # 全新库，建 v1
+        # 全新库 → 建 v1 + v2 增量
         conn.executescript(SCHEMA_V1)
+        conn.executescript(SCHEMA_V2_ADDITIONS)
+        _seed_v2_singleton_rows(conn)
+        conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
+        conn.commit()
+        return CURRENT_SCHEMA_VERSION
+
+    if current == 1 and CURRENT_SCHEMA_VERSION >= 2:
+        # v1 → v2 增量迁移
+        _migrate_v1_to_v2(conn)
         conn.execute(f"PRAGMA user_version = {CURRENT_SCHEMA_VERSION}")
         conn.commit()
         return CURRENT_SCHEMA_VERSION
 
     if current < CURRENT_SCHEMA_VERSION:
-        # 未来的迁移路径：v1 → v2 时在此处加 migration 函数
+        # 未来 v2 → v3 等迁移路径在此处接
         raise NotImplementedError(
             f"Schema migration from v{current} to v{CURRENT_SCHEMA_VERSION} not implemented"
         )

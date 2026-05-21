@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ektro-pen sync daemon LaunchAgent (macOS).
+
+  生成: packaging/macos/install-launchagent.sh 替换 {{REPO_ROOT}} / {{PYTHON}} / {{LOG_DIR}} 后写到
+        ~/Library/LaunchAgents/com.ektro.sync.plist
+
+  装载: launchctl load ~/Library/LaunchAgents/com.ektro.sync.plist
+  卸载: launchctl unload ~/Library/LaunchAgents/com.ektro.sync.plist
+
+  策略:
+  - RunAtLoad: 系统/账号登录后自动起
+  - KeepAlive: 异常退出 10s 后重启 (链接失效时 daemon 自己退,我们不要 KeepAlive 无脑拉起 → 用 SuccessfulExit=false 仅崩溃时拉起)
+  - 日志走 ~/Library/Logs/Ektro/
+  - ThrottleInterval: 重启间隔 30s (防 fast-cycle)
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ektro.sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{PYTHON}}</string>
+        <string>-m</string>
+        <string>sync</string>
+        <string>daemon</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>{{REPO_ROOT}}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>{{REPO_ROOT}}/src</string>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>Crashed</key>
+        <true/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardOutPath</key>
+    <string>{{LOG_DIR}}/sync.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>{{LOG_DIR}}/sync.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>

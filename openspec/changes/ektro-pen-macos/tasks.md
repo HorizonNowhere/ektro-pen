@@ -1,3 +1,12 @@
+## 0. Phase 0 · C++ SDK 跨平台基础 ✅ 已完成 (2026-05-22)
+
+- [x] 0.1 cmake -DEKTRO_PLATFORM=macos configure + build 通过 (Apple Silicon)
+- [x] 0.2 现有 33 GoogleTests 在 macOS 全过 — 证明 src-cpp 跨平台无障碍
+- [x] 0.3 C++ schema 升 v2 (schema.h/cpp) — device_link / sync_cursor / backfill_state
+       与 Python schema.py 一字不差, v1→v2 migration + seed 单行
+- [x] 0.4 test_schema_v2.cpp 10 GoogleTests 全过 (C++ 测试总数 43)
+- 结论: macOS fork 的 commit capture = 直接 link `ektro_sdk.h` C ABI, 零业务逻辑复刻
+
 ## 1. Phase 1 · Fork + 编译 (1 周)
 
 - [ ] 1.1 Apple Developer Program 注册 ($99/年,项目级账号)
@@ -7,14 +16,15 @@
 - [ ] 1.5 改 Info.plist Bundle ID `im.rime.inputmethod.Squirrel` → `org.ektroai.input.pen` 与 Squirrel 共存
 - [ ] 1.6 README 添加分支说明,标记"fork from rime/squirrel, GPL-3"
 
-## 2. Phase 2 · EktroMemoryStore 钩子 (1 周)
+## 2. Phase 2 · commit capture 接 C ABI (3-5 天,比原估计缩短)
 
-- [ ] 2.1 SQLite C 库直接 link 进 Squirrel app (避免 subprocess 延迟) — 测试 commit 落库吞吐
-- [ ] 2.2 ObjC 端复刻 EktroMemoryStore.log_commit 的隐私拦截三层 (密码框检测 / 银行卡/身份证/email 正则 / privacy_exclude 表)
-  - **关键**: 单元测试与 Python `tests/memory/test_store.py` 对齐, 同 fixture 同结果
-- [ ] 2.3 在 `SquirrelInputController.commitComposition:` 后异步写 commit_log (NSOperationQueue background)
-- [ ] 2.4 schema.init_db 在 IME app 首启时跑 (调用 schema_v2 SQL)
-- [ ] 2.5 真打字 100 字测试,验证 commit_log 行数对齐 + 隐私拦截生效 (密码框打字不入库)
+- [ ] 2.1 把 src-cpp 编为 `libektro.a` 静态库,加入 ektro-pen-macos Xcode 工程链接
+- [ ] 2.2 ObjC++ 桥接: `#include "ektro/ektro_sdk.h"`,app 首启 `ektro_create(db_path, cfg)`
+       (内部自动跑 schema v2 init_db),退出 `ektro_destroy`
+- [ ] 2.3 在 `SquirrelInputController.commitComposition:` 后调 `ektro_log_commit(...)`
+       (C++ 已含三层隐私拦截,ObjC 零复刻;NSOperationQueue 异步不阻塞 IME 主线程)
+- [ ] 2.4 密码框场景调 `ektro_set_password_field(ctx, 1)` — 从 IMK 的 secure input 状态读
+- [ ] 2.5 真打字 100 字测试,验证 commit_log 行数对齐 + 密码框打字不入库 + ektro_last_error 为空
 
 ## 3. Phase 3 · 链接 UI (3 天)
 

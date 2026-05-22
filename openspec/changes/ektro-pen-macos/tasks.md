@@ -9,7 +9,11 @@
 
 ## 1. Phase 1 · Fork + 编译 (1 周)
 
-- [ ] 1.1 Apple Developer Program 注册 ($99/年,项目级账号)
+- [ ] 1.1 复用现有 Apple Developer 公司账号 (Organization, 已付费有效):
+       - 确认操作人角色为 Account Holder / Admin (Developer ID 证书需此权限)
+       - 在 Certificates 创建 `Developer ID Application` + `Developer ID Installer` 两张证书
+       - 注: 走 Developer ID 分发, 不上 Mac App Store, 与账号之前已上架的 App 互不冲突
+       - 无需新账号 / 无需额外 $99
 - [ ] 1.2 在 ektroai 组织下 fork [rime/squirrel](https://github.com/rime/squirrel) → ektro-pen-macos
 - [ ] 1.3 本地 Xcode 编译 Squirrel 通过 (验证 librime 静态链接 / 签名 / 安装到 ~/Library/Input Methods/)
 - [ ] 1.4 系统设置 → 键盘 → 输入源添加 ektro-pen-macos,真打字验证拼音→中文流程

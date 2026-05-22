@@ -33,9 +33,10 @@ ektro-pen-macos = fork Squirrel + 接入 EktroMemoryStore + 唤醒 UploaderDaemo
 
 **新仓库 ektro-pen-macos** (独立项目):
 - fork rime/squirrel 起点,保留 upstream merge 通道
-- 集成 ektro-pen Python sync 层作为同进程依赖 (PyObjC) 或外部进程 (subprocess)
-- Apple Developer Program 年费 $99 (项目级开销)
-- 代码签名 + 公证 (Notarization) 流程
+- 集成 ektro-pen Python sync 层作为外部进程 (subprocess + launchctl)
+- **Apple Developer 账号: 复用现有公司账号 (Organization,已付费有效)** —
+  一个 membership 注册无限 App,与账号已上架的 App 不冲突,无额外开销
+- 代码签名 (Developer ID Application/Installer) + 公证 (Notarization) 流程
 
 **ektro-pen 主仓** (本仓):
 - Python 模块 (memory/auth/sync) 保持 stdlib-only 不变 — macOS fork 直接复用

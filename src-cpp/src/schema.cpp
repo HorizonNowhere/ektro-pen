@@ -22,9 +22,10 @@ int init_db(sqlite3* db) {
     }
 
     if (current == 0) {
-        // 新库，建 v1
+        // 新库 — 建 v1 + v2 增量 + seed v2 单行
         char* err = nullptr;
-        std::string sql{kSchemaV1};
+        std::string sql = std::string{kSchemaV1} + std::string{kSchemaV2Additions} +
+                          std::string{kSchemaV2Seed};
         if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err) != SQLITE_OK) {
             sqlite3_free(err);
             return 0;
@@ -38,7 +39,20 @@ int init_db(sqlite3* db) {
         return -1;  // 未来版本 DB，本进程无法处理
     }
 
-    // current == kCurrentSchemaVersion 或 v1→v2 迁移路径（暂无 migration）
+    if (current == 1 && kCurrentSchemaVersion >= 2) {
+        // v1 → v2 增量迁移: ADD TABLE x3 + seed 单行 (不动 v1 五张表)
+        char* err = nullptr;
+        std::string sql = std::string{kSchemaV2Additions} + std::string{kSchemaV2Seed};
+        if (sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err) != SQLITE_OK) {
+            sqlite3_free(err);
+            return 0;
+        }
+        std::string set_ver = "PRAGMA user_version = " + std::to_string(kCurrentSchemaVersion);
+        sqlite3_exec(db, set_ver.c_str(), nullptr, nullptr, nullptr);
+        return kCurrentSchemaVersion;
+    }
+
+    // current == kCurrentSchemaVersion
     return current;
 }
 

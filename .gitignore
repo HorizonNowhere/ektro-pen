@@ -54,6 +54,7 @@ DIAG_GLOG_LOG.txt
 DIAG_GLOG_MARKER.txt
 
 src-cpp/build/
+src-cpp/build-mac/
 *.obj
 *.lib
 *.dll

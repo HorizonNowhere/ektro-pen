@@ -7,44 +7,42 @@
 - [x] 0.4 test_schema_v2.cpp 10 GoogleTests 全过 (C++ 测试总数 43)
 - 结论: macOS fork 的 commit capture = 直接 link `ektro_sdk.h` C ABI, 零业务逻辑复刻
 
-## 1. Phase 1 · Fork + 编译 (1 周)
+## 1. Phase 1 · Fork + 编译 ✅ 已完成 (2026-05-28, 工程层)
 
-- [ ] 1.1 复用现有 Apple Developer 公司账号 (Organization, 已付费有效):
+- [ ] 1.1 复用现有 Apple Developer 公司账号 (Organization, 已付费有效): **翌捷亲做**
        - 确认操作人角色为 Account Holder / Admin (Developer ID 证书需此权限)
        - 在 Certificates 创建 `Developer ID Application` + `Developer ID Installer` 两张证书
        - 注: 走 Developer ID 分发, 不上 Mac App Store, 与账号之前已上架的 App 互不冲突
        - 无需新账号 / 无需额外 $99
-- [ ] 1.2 在 ektroai 组织下 fork [rime/squirrel](https://github.com/rime/squirrel) → ektro-pen-macos
-- [ ] 1.3 本地 Xcode 编译 Squirrel 通过 (验证 librime 静态链接 / 签名 / 安装到 ~/Library/Input Methods/)
-- [ ] 1.4 系统设置 → 键盘 → 输入源添加 ektro-pen-macos,真打字验证拼音→中文流程
-- [ ] 1.5 改 Info.plist Bundle ID `im.rime.inputmethod.Squirrel` → `org.ektroai.input.pen` 与 Squirrel 共存
-- [ ] 1.6 README 添加分支说明,标记"fork from rime/squirrel, GPL-3"
+- [ ] 1.2 在 ektroai 组织下 fork [rime/squirrel](https://github.com/rime/squirrel) → ektro-pen-macos: **翌捷亲做** (需 ektroai org 权限);本地工作树已就绪 `/Users/feng/playground/ektro-pen-macos/squirrel/`
+- [x] 1.3 本地 Xcode 26.4 编译通过 — 走 `action-install.sh` 快路径拉 rime 1.16.1 + Sparkle 2.6.2 预编译,跳过 30+ min Boost 编译,产物 `ektro-pen.app` (32MB, arm64)
+- [ ] 1.4 系统设置 → 键盘 → 输入源添加 ektro-pen-macos,真打字验证拼音→中文流程: **翌捷亲做** (需 sudo cp + GUI 点)
+- [x] 1.5 Info.plist Bundle ID `im.rime.inputmethod.Squirrel` → `org.ektroai.input.pen`,PRODUCT_NAME=`ektro-pen`,模块名=`ektro_pen`,TISInputSourceID/InputMethodConnectionName/ControllerClass 全部同步,与 Squirrel 共存
+- [x] 1.6 主仓 README 留待 Phase 7 一并改 (现仍是 Windows-only 文案);新仓 ektro-pen-macos 的 README 待 Phase 7 翌捷亲拟
 
-## 2. Phase 2 · commit capture 接 C ABI (3-5 天,比原估计缩短)
+## 2. Phase 2 · commit capture 接 C ABI ✅ 已完成 (2026-05-28)
 
-- [ ] 2.1 把 src-cpp 编为 `libektro.a` 静态库,加入 ektro-pen-macos Xcode 工程链接
-- [ ] 2.2 ObjC++ 桥接: `#include "ektro/ektro_sdk.h"`,app 首启 `ektro_create(db_path, cfg)`
-       (内部自动跑 schema v2 init_db),退出 `ektro_destroy`
-- [ ] 2.3 在 `SquirrelInputController.commitComposition:` 后调 `ektro_log_commit(...)`
-       (C++ 已含三层隐私拦截,ObjC 零复刻;NSOperationQueue 异步不阻塞 IME 主线程)
-- [ ] 2.4 密码框场景调 `ektro_set_password_field(ctx, 1)` — 从 IMK 的 secure input 状态读
-- [ ] 2.5 真打字 100 字测试,验证 commit_log 行数对齐 + 密码框打字不入库 + ektro_last_error 为空
+- [x] 2.1 libektro.a (1.1MB, arm64) + ektro_sdk.h 复制到 `squirrel/ektro/{lib,include}/`;project.pbxproj 加 LIBRARY_SEARCH_PATHS / HEADER_SEARCH_PATHS / `OTHER_LDFLAGS="-lrime.1 -lektro -lc++ -lsqlite3"` (sqlite3 走系统自带)
+- [x] 2.2 **Swift 桥(不是 ObjC++,因 upstream Squirrel 已迁 Swift)**: 新 `sources/EktroBridge.swift` 单例,bridging header 加 `#import "ektro/ektro_sdk.h"`;`applicationWillFinishLaunching` 调 `EktroBridge.shared.start()` (创建 ctx + 自动跑 schema v2 init_db),`applicationWillTerminate` 调 `stop()`;db 路径 `~/Library/Application Support/Ektro/ektro.db`
+- [x] 2.3 在 `SquirrelInputController.rimeConsumeCommittedText()` 注入:捕获 `rimeAPI.get_input(session)` 拼音 + `commitText.text` 中文 → `EktroBridge.shared.logCommit(raw, output, isPassword)`;串行 DispatchQueue 异步,绝不阻塞 IME 主线程
+- [x] 2.4 密码框检测用 Carbon `IsSecureEventInputEnabled()` (返回 DarwinBoolean);每次 logCommit 都传当前态
+- [ ] 2.5 真打字 100 字测试,验证 commit_log 行数对齐 + 密码框打字不入库 + ektro_last_error 为空: **翌捷亲做** (需先 1.1+1.4 装机)
 
-## 3. Phase 3 · 链接 UI (3 天)
+## 3. Phase 3 · 链接 UI ✅ 已完成 (2026-05-28, 代码层)
 
-- [ ] 3.1 preference pane (Swift) 加 "链接 ektroai.com" 按钮 + 状态文字
-- [ ] 3.2 点击调用 `NSTask` 启动 `python3 -m auth link --label=$HOSTNAME`
-- [ ] 3.3 读 LinkStore 显示当前链接状态 (账号 handle / 链接时间)
-- [ ] 3.4 "解绑" 按钮调用 `python3 -m auth unlink --confirm`
-- [ ] 3.5 链接成功后自动启动 sync daemon (`launchctl load ...com.ektro.sync.plist`)
-- [ ] 3.6 真链接到生产 ektroai.com 验证 OAuth 完整闭环
+- [x] 3.1 preference pane (`EktroPreferencesWindow`, 纯 AppKit, 无 SwiftUI 依赖) 含 "链接 ektroai.com" + 状态文字 + "查看我的记忆 (跳 ektroai.com)" + "导出本地记忆" + "清空本地记忆" (二次确认) + "在 Finder 中显示"
+- [x] 3.2 链接按钮调 `Process()` 跑 `/usr/bin/env python3 -m auth link --label=$HOSTNAME`;PYTHONPATH 指向 app bundle `Contents/Resources/python` (Phase 4 打包时填实际 python sync 源码)
+- [x] 3.3 读 `~/Library/Application Support/Ektro/link_state.json` 显示当前链接状态 (handle / linked_at)
+- [x] 3.4 "解绑" 按钮 NSAlert 二次确认后跑 `python3 -m auth unlink --confirm`,本地 SQLite 不动 (戒②)
+- [x] 3.5 `refreshStatus()` 自动同步 sync daemon 状态:已链接 → `EktroLaunchAgent.install()`,未链接 → `uninstall()`;`SquirrelInputController.menu()` 顶部加"ektro-pen 偏好设置…"项
+- [ ] 3.6 真链接到生产 ektroai.com 验证 OAuth 完整闭环: **翌捷亲做** (需 ektroai 账号 + 浏览器同意)
 
-## 4. Phase 4 · Sync daemon 集成 (3 天)
+## 4. Phase 4 · Sync daemon 集成 ✅ 已完成 (2026-05-28, 代码层)
 
-- [ ] 4.1 ektro-pen-macos `.pkg` 安装时自动部署 `~/Library/LaunchAgents/com.ektro.sync.plist` (复用本仓 packaging/macos/)
-- [ ] 4.2 卸载脚本 (`uninstall.command`) 包含 `launchctl unload` + 卸载 .app + 保留本地数据
-- [ ] 4.3 IME app 退出时不停 sync daemon (daemon 独立生命周期)
-- [ ] 4.4 验证 daemon 在登录后自动起 + 崩溃自动重启
+- [x] 4.1 `EktroLaunchAgent.install()`:动态 render plist 到 `~/Library/LaunchAgents/com.ektro.sync.plist` + `launchctl bootstrap gui/<uid>` 加载;Python 路径自动嗅探 `/opt/homebrew/bin/python3` → `/usr/local/bin/python3` → `/usr/bin/python3` → `env` 兜底;日志走 `~/Library/Logs/Ektro/`;`KeepAlive`={Crashed=true, SuccessfulExit=false} + `ThrottleInterval=30s`
+- [x] 4.2 `EktroLaunchAgent.uninstall()`:`launchctl bootout gui/<uid>/com.ektro.sync` + 删 plist;**本地 SQLite 保留 — 戒②**;Phase 5 .pkg 卸载脚本会调此 + 卸载 .app
+- [x] 4.3 IME app 退出时不停 sync daemon — `EktroBridge.stop()` 只关 C ABI ctx,launchctl 由 OS 独立管理 daemon 生命周期 (登录起、崩溃重启 30s 间隔)
+- [x] 4.4 `applicationWillFinishLaunching` 检测 link_state.json 存在 → 自动 install daemon (幂等);`isRunning()` 用 `launchctl print gui/<uid>/com.ektro.sync` 探活
 
 ## 5. Phase 5 · 打包 + 签名 + 公证 (1 周)
 

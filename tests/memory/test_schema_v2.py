@@ -207,12 +207,12 @@ class TestLinkStateUpdates(unittest.TestCase):
         self.conn.execute(
             "UPDATE device_link SET linked_user_id = ?, linked_user_handle = ?, linked_at = ? "
             "WHERE id = 1",
-            ("user-uuid-1234", "@yijie", 1700000001000),
+            ("user-uuid-1234", "@testuser", 1700000001000),
         )
         row = self.conn.execute(
             "SELECT linked_user_id, linked_user_handle, linked_at FROM device_link WHERE id = 1"
         ).fetchone()
-        self.assertEqual(row, ("user-uuid-1234", "@yijie", 1700000001000))
+        self.assertEqual(row, ("user-uuid-1234", "@testuser", 1700000001000))
 
         # 解绑: linked_user_id 置 NULL + revoked_at
         self.conn.execute(

@@ -56,7 +56,7 @@ class _Fixture(unittest.TestCase):
 
     def _link_with_record(self, record: KeyringRecord) -> None:
         """模拟链接:写 keyring (mock) + LinkStore.set_link"""
-        self.link_store.set_link("user-uuid", "@yijie")
+        self.link_store.set_link("user-uuid", "@testuser")
         # keyring mock 由调用方设置
 
 
@@ -80,7 +80,7 @@ class TestLinkedFreshToken(_Fixture):
         # 模拟链接 + 未过期 record
         far_future = int(time.time() * 1000) + 3600 * 1000
         self.record = KeyringRecord("access-A", "refresh-A", far_future, far_future - 60_000)
-        self.link_store.set_link("user-1", "@yijie")
+        self.link_store.set_link("user-1", "@testuser")
 
     def test_get_token_no_refresh(self):
         """未过期时直接返回,不调 refresh"""

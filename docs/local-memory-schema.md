@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS device_link (
     created_at      INTEGER NOT NULL,                     -- device_id 生成时间
     -- 链接状态（NULL = 未链接）
     linked_user_id     TEXT,                              -- ektro 用户 UUID
-    linked_user_handle TEXT,                              -- 显示用 handle（"@yijie"）
+    linked_user_handle TEXT,                              -- 显示用 handle（"@testuser"）
     linked_at          INTEGER,
     revoked_at         INTEGER,                           -- 解绑时间（软痕迹）
     ektro_endpoint     TEXT NOT NULL DEFAULT 'https://ektroai.com'

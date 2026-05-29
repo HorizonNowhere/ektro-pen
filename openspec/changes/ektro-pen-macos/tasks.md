@@ -14,7 +14,7 @@
        - 在 Certificates 创建 `Developer ID Application` + `Developer ID Installer` 两张证书
        - 注: 走 Developer ID 分发, 不上 Mac App Store, 与账号之前已上架的 App 互不冲突
        - 无需新账号 / 无需额外 $99
-- [ ] 1.2 在 ektroai 组织下 fork [rime/squirrel](https://github.com/rime/squirrel) → ektro-pen-macos: **翌捷亲做** (需 ektroai org 权限);本地工作树已就绪 `/Users/feng/playground/ektro-pen-macos/squirrel/`
+- [ ] 1.2 在 ektroai 组织下 fork [rime/squirrel](https://github.com/rime/squirrel) → ektro-pen-macos: **翌捷亲做** (需 ektroai org 权限);本地工作树已就绪 (`<playground>/ektro-pen-macos/squirrel/`)
 - [x] 1.3 本地 Xcode 26.4 编译通过 — 走 `action-install.sh` 快路径拉 rime 1.16.1 + Sparkle 2.6.2 预编译,跳过 30+ min Boost 编译,产物 `ektro-pen.app` (32MB, arm64)
 - [ ] 1.4 系统设置 → 键盘 → 输入源添加 ektro-pen-macos,真打字验证拼音→中文流程: **翌捷亲做** (需 sudo cp + GUI 点)
 - [x] 1.5 Info.plist Bundle ID `im.rime.inputmethod.Squirrel` → `org.ektroai.input.pen`,PRODUCT_NAME=`ektro-pen`,模块名=`ektro_pen`,TISInputSourceID/InputMethodConnectionName/ControllerClass 全部同步,与 Squirrel 共存

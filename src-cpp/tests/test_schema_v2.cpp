@@ -213,7 +213,7 @@ TEST_F(SchemaV2Fixture, LinkThenRevoke) {
     // 链接
     ASSERT_TRUE(exec(
         "UPDATE device_link SET linked_user_id='user-1', "
-        "linked_user_handle='@yijie', linked_at=1700000001000 WHERE id=1"));
+        "linked_user_handle='@testuser', linked_at=1700000001000 WHERE id=1"));
     EXPECT_EQ(query_text("SELECT linked_user_id FROM device_link WHERE id=1"), "user-1");
 
     // 解绑

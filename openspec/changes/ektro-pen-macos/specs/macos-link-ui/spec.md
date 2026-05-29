@@ -13,7 +13,7 @@ ektro-pen-macos preference pane SHALL 包含一个"链接 ektroai.com"区域,显
 #### Scenario: 用户点链接按钮触发 OAuth
 
 - **WHEN** 未链接用户在 macOS 系统设置→键盘→输入源→ektro-pen→选项 中点击"链接 ektroai.com"
-- **THEN** Safari 自动打开 ektroai.com/me/ime-link 同意页;用户登录后点"允许链接"→自动跳回 loopback;preference pane 状态更新为"已链接 @yijie"
+- **THEN** Safari 自动打开 ektroai.com/me/ime-link 同意页;用户登录后点"允许链接"→自动跳回 loopback;preference pane 状态更新为"已链接 @testuser"
 
 #### Scenario: 用户点解绑按钮
 

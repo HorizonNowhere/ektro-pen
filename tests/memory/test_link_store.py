@@ -56,16 +56,16 @@ class TestDeviceLinkReads(_Base):
 
 class TestDeviceLinkWrites(_Base):
     def test_set_label(self):
-        self.store.set_device_label("yijie-mbp")
-        self.assertEqual(self.store.get_device_link().device_label, "yijie-mbp")
+        self.store.set_device_label("test-device")
+        self.assertEqual(self.store.get_device_link().device_label, "test-device")
 
     def test_set_link_then_clear(self):
         # 链接
-        self.store.set_link("user-uuid-1234", "@yijie")
+        self.store.set_link("user-uuid-1234", "@testuser")
         link = self.store.get_device_link()
         self.assertTrue(link.is_linked)
         self.assertEqual(link.linked_user_id, "user-uuid-1234")
-        self.assertEqual(link.linked_user_handle, "@yijie")
+        self.assertEqual(link.linked_user_handle, "@testuser")
         self.assertIsNotNone(link.linked_at)
         self.assertIsNone(link.revoked_at)
 

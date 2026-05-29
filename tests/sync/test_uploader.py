@@ -61,7 +61,7 @@ class _Base(unittest.TestCase):
         self.lock = threading.Lock()
         self.link_store = LinkStore(self.conn, self.lock)
         # 模拟链接
-        self.link_store.set_link("user-1", "@yijie")
+        self.link_store.set_link("user-1", "@testuser")
         self.device_id = self.link_store.get_device_link().device_id
 
         self.tm = unittest.mock.Mock(spec=TokenManager)

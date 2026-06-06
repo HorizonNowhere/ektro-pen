@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# ektro-pen 密钥泄露防线 · 提交前用 gitleaks 扫描暂存区
+#   gitleaks 已装 → 发现疑似密钥则硬拦截本次 commit
+#   gitleaks 未装 → 打黄色警告但放行 (soft-fail，不卡你提交)
+# 单次绕过 (确认是误报后):  git commit --no-verify
+set -uo pipefail
+
+# 定位 gitleaks：先看 PATH，再兜底 Homebrew 常见路径 (arm64 / Intel)
+GITLEAKS_BIN="$(command -v gitleaks || true)"
+if [ -z "$GITLEAKS_BIN" ]; then
+  for p in /opt/homebrew/bin/gitleaks /usr/local/bin/gitleaks; do
+    if [ -x "$p" ]; then GITLEAKS_BIN="$p"; break; fi
+  done
+fi
+
+# soft-fail：没装 gitleaks 不阻断提交，只提醒怎么装
+if [ -z "$GITLEAKS_BIN" ]; then
+  printf '\033[33m⚠ gitleaks 未安装 — 跳过密钥扫描 (soft-fail，已放行本次提交)\033[0m\n' >&2
+  printf '  启用提交前防护:  \033[36mbrew install gitleaks\033[0m\n' >&2
+  exit 0
+fi
+
+# 只扫暂存区 (本次要提交的内容)，快；--redact 不把密钥明文打到终端
+if ! "$GITLEAKS_BIN" git --staged --redact --no-banner -v; then
+  printf '\n\033[31m✖ gitleaks 在暂存区发现疑似密钥 — 已拦截本次提交\033[0m\n' >&2
+  printf '  按上方 Finding 的文件/行号/规则移除密钥后重新 commit。\n' >&2
+  printf '  确认是误报需放行:  \033[36mgit commit --no-verify\033[0m\n' >&2
+  printf '  或把该 Finding 的指纹写入 \033[36m.gitleaksignore\033[0m\n' >&2
+  exit 1
+fi

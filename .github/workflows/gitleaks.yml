@@ -1,0 +1,31 @@
+name: gitleaks
+
+# 公开仓 → GitHub Actions 标准 runner 免费、不限分钟，不占账单额度。
+# push 到 master / 任意 PR 时，对全 git 历史做密钥泄露扫描，作为本地 hook 的云端兜底。
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 全历史，覆盖所有 commit 而不只是最新一笔
+
+      - name: Install gitleaks
+        run: |
+          VERSION=8.30.1
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan full git history
+        run: gitleaks git --redact --no-banner -v --exit-code 1

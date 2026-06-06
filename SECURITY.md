@@ -32,6 +32,15 @@ ektro-pen 是一个**本地优先**的输入法记忆 SDK,安全设计如下:
   **仓库内无任何密钥** —— 不含 API key / token / 生产主机名 / `.env`;`.gitignore` 已挡
   `.env*` / `secrets/` / `*.db*`。
 
+- **Automated secret scanning (defense in depth).** Beyond `.gitignore`, a
+  [gitleaks](https://github.com/gitleaks/gitleaks) pre-commit hook (`.githooks/pre-commit`)
+  blocks commits containing secrets locally, and a CI workflow
+  (`.github/workflows/gitleaks.yml`) re-scans the full git history on every push / PR.
+  Enable the hook after cloning with `bash scripts/install-hooks.sh`.
+  **自动密钥扫描(纵深防御)** —— 除 `.gitignore` 外,gitleaks 提交前 hook
+  (`.githooks/pre-commit`)在本地拦截含密钥的提交,CI(`.github/workflows/gitleaks.yml`)
+  在每次 push / PR 时全历史复扫。克隆后跑 `bash scripts/install-hooks.sh` 启用 hook。
+
 ## Reporting a vulnerability / 报告漏洞
 
 Please **do not** open a public issue for security problems.
